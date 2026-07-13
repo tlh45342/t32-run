@@ -1,0 +1,11 @@
+logfile mov.log
+version
+reset
+load mov.t32 0x1000
+e 0x1000 16
+set pc 0x1000
+set run steps 3
+run
+regs
+status
+logfile off
