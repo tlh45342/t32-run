@@ -9,7 +9,7 @@ This repository contains:
 - `t32-run` — a local interactive and scriptable runner
 - executable smoke tests and execution-trace verification
 
-Version 0.0.2 remains intentionally narrow. It supports the instructions
+Version 0.0.3 remains intentionally narrow. It supports the instructions
 needed to prove immediate loading, register copying, and deterministic halt:
 
 ```asm
