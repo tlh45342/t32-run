@@ -182,3 +182,5 @@ Use `T32_VERSION` rather than a generic `VERSION` macro so future T32 tools can
 include the header without colliding with unrelated projects.
 
 The next instructions should be added only with matching scripted tests.
+
+-TLH
