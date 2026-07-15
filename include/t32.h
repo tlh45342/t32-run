@@ -5,13 +5,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "t32_opcodes.h"
+
 #define T32_REGISTER_COUNT 16u
 #define T32_DEFAULT_MEMORY_SIZE (1024u * 1024u)
-
-#define T32_OPCODE_HALT 0x00u
-#define T32_OPCODE_MOV  0x01u
-#define T32_OPCODE_MOVI 0x02u
-#define T32_OPCODE_ADD  0x03u
 
 typedef enum {
     T32_STATE_STOPPED = 0,

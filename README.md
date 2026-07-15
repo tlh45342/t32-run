@@ -1,22 +1,23 @@
-# T32
+# T32 Run
 
-T32 is a small, deterministic 32-bit virtual machine project and part of the
-larger Foundry experiment.
+`t32-run` is the reference execution environment for the T32 virtual CPU and
+part of the larger Foundry project.
 
 This repository contains:
 
-- `libt32` — the reusable execution core
-- `t32-run` — a local interactive and scriptable runner
-- executable smoke tests and execution-trace verification
+- `libt32` — reusable T32 CPU and memory execution core
+- `t32-run` — interactive and scriptable command-line runner
+- canonical opcode definitions shared by the runtime
+- ISA smoke tests covering all 37 currently defined instructions
 
-Version 0.0.3 remains intentionally narrow. It supports the instructions
-needed to prove immediate loading, register copying, and deterministic halt:
+## Version
 
-```asm
-movi r0, 47
-mov  r1, r0
-halt
+```text
+t32-run 0.0.4
 ```
+
+Version 0.0.4 adopts the canonical T32 opcode map and provides first-pass
+execution behavior for all 37 defined instructions.
 
 ## Build
 
@@ -34,19 +35,6 @@ The default developer install prefix is:
 ~/.local
 ```
 
-Ensure the executable directory is on your path:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-echo "$PATH"
-```
-
-For a system-wide installation:
-
-```bash
-sudo make PREFIX=/usr/local install
-```
-
 Windows with MinGW/GNU Make:
 
 ```bat
@@ -61,27 +49,46 @@ lib/libt32.a
 bin/t32-run
 ```
 
-## Direct execution
-
-```bash
-t32-run tests/00-smoke/001-r0-47/test.t32 0x1000
-```
-
-Expected:
+## Canonical ISA families
 
 ```text
-state=halted
-pc=0x0000100c
-r0=0x0000002f
-reason=HALT instruction
+00-04  system       HALT NOP TRAP IRET CPUID
+08-09  movement     MOV MOVI
+16-21  memory       LDB LDH LDW STB STH STW
+24-31  arithmetic   ADD ADDI SUB SUBI MUL MULU DIV DIVU
+32-38  logic/shift  AND OR XOR NOT SHL SHR SAR
+40-44  compare/jump CMP CMPI JMP JZ JNZ
+48-51  stack/call   PUSH POP CALL RET
 ```
+
+The complete numeric map is defined in:
+
+```text
+include/t32_opcodes.h
+```
+
+## Important first-pass semantics
+
+- `r15` is the downward-growing stack pointer.
+- `LDB` and `LDH` zero-extend values into 32-bit registers.
+- `CALL` pushes the return address; `RET` pops it.
+- `JZ` and `JNZ` test the named register directly.
+- Shift counts use the low five bits of the count register.
+- Subtraction carry follows the no-borrow convention.
+- `TRAP` currently halts cleanly and reports its vector. A vector table and
+  operating-system trap dispatch remain future work.
+- `IRET` currently restores a PC value from the stack. Full interrupt-frame
+  restoration remains future work.
+- `CPUID rd` writes `0x54333201` to `rd` in this implementation.
+
+These choices are deliberately simple and may be refined with matching ISA
+versioning and regression tests.
 
 ## Interactive use
 
 ```text
 t32-run
-t32-run> load test.t32 0x1000
-t32-run> e 0x1000-0x100b
+t32-run> load test.bin 0x1000
 t32-run> set pc 0x1000
 t32-run> run
 t32-run> regs
@@ -92,12 +99,6 @@ t32-run> status
 
 ```bash
 t32-run < test.script
-```
-
-or interactively:
-
-```text
-t32-run> do test.script
 ```
 
 Supported commands:
@@ -123,64 +124,13 @@ reset
 quit
 ```
 
-## First test
+## Tests
 
-```text
-tests/00-smoke/001-r0-47/
+```bash
+make test
 ```
 
-`run_tests.py` assembles the source with `t32-asm` when available. If the
-assembler is not installed, it writes the known-good 12-byte binary so the
-execution core can still be tested independently.
-
-The test verifies:
-
-- instruction bytes in memory
-- final `r0`
-- final `pc`
-- halted state
-- instruction count
-- halt reason
-- execution log creation
-
-## Current instruction encoding
-
-T32 instructions are fixed 32-bit little-endian words:
-
-```text
-bits 31..24  opcode
-bits 23..20  destination register
-bits 19..0   reserved
-```
-
-`MOVI` consumes a second 32-bit word:
-
-```text
-word 0: opcode=MOVI, destination register
-word 1: immediate value
-```
-
-Current opcodes:
-
-```text
-0x00 HALT
-0x01 MOV
-0x02 MOVI
-```
-
-`MOV` copies one register to another and does not modify flags.
-
-## Versioning
-
-The shared public version is defined in:
-
-```text
-include/version.h
-```
-
-Use `T32_VERSION` rather than a generic `VERSION` macro so future T32 tools can
-include the header without colliding with unrelated projects.
-
-The next instructions should be added only with matching scripted tests.
-
--TLH
+The ISA smoke suite validates decode and basic execution behavior across all 37
+instructions. It is a bring-up suite, not yet exhaustive architectural
+conformance. Boundary, aliasing, fault, overflow, and flag matrices should be
+expanded instruction by instruction.

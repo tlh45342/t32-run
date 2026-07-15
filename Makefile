@@ -74,8 +74,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 test: all
-	$(PYTHON) tests/00-smoke/001-r0-47/run_tests.py
-	$(PYTHON) tests/01-core-iset/002-mov/run_tests.py
+	$(PYTHON) tests/isa_smoke.py
 
 install: all
 	@$(MKDIR_P) "$(PREFIX)/bin"
@@ -84,6 +83,7 @@ install: all
 	@$(CP) "$(T32_RUN)" "$(PREFIX)/bin/"
 	@$(CP) "$(LIBT32)" "$(PREFIX)/lib/"
 	@$(CP) "$(INC_DIR)/t32.h" "$(PREFIX)/include/"
+	@$(CP) "$(INC_DIR)/t32_opcodes.h" "$(PREFIX)/include/"
 	@$(CP) "$(INC_DIR)/version.h" "$(PREFIX)/include/"
 	@echo "Installed t32-run to $(PREFIX)/bin"
 	@echo "Installed libt32.a to $(PREFIX)/lib"
