@@ -1,102 +1,61 @@
-# T32 Makefile
-#
-# Builds:
-#   lib/libt32.a
-#   bin/t32-run
+# t32-asm Makefile
 #
 # Linux/macOS:
 #   make
-#   make test
 #   make install
 #
-# Windows with MinGW:
+# Windows with MinGW/GNU Make:
 #   make
-#   make test
+#
+# Override CC, CFLAGS, PREFIX, or BINDIR as needed.
 
-PROJECT := t32
-SRC_DIR := src
-INC_DIR := include
-BUILD_DIR := build
-BIN_DIR := bin
-LIB_DIR := lib
+CC ?= cc
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -O2
+
+SRC := src/t32-asm.c
 
 ifeq ($(OS),Windows_NT)
-	CC := gcc
-	AR := ar
-	EXEEXT := .exe
-
-	GNU_BIN ?= C:/Program Files/GNU/bin
-	MKDIR_P ?= "$(GNU_BIN)/mkdir.exe" -p
-	RM_RF ?= "$(GNU_BIN)/rm.exe" -rf
-	CP ?= "$(GNU_BIN)/cp.exe" -f
-
-	PREFIX ?= C:/Program Files/libvm
-	PYTHON ?= python
+TARGET := t32-asm.exe
+PREFIX ?= $(USERPROFILE)/.local
+BINDIR ?= $(PREFIX)/bin
+MKDIR_P := mkdir
+CP := copy /Y
+RM := del /Q
 else
-	CC ?= cc
-	AR ?= ar
-	EXEEXT :=
-
-	MKDIR_P ?= mkdir -p
-	RM_RF ?= rm -rf
-	CP ?= cp -f
-
-	PREFIX ?= $(HOME)/.local
-	PYTHON ?= python3
+TARGET := t32-asm
+PREFIX ?= $(HOME)/.local
+BINDIR ?= $(PREFIX)/bin
+MKDIR_P := mkdir -p
+CP := cp
+RM := rm -f
 endif
 
-CPPFLAGS ?= -I$(INC_DIR)
-CFLAGS ?= -Wall -Wextra -Wpedantic -O2
+all: $(TARGET)
 
-LIBT32 := $(LIB_DIR)/libt32.a
-T32_RUN := $(BIN_DIR)/t32-run$(EXEEXT)
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET)
 
-CORE_OBJECTS := \
-	$(BUILD_DIR)/t32.o
+test: $(TARGET)
+ifeq ($(OS),Windows_NT)
+	$(TARGET) -f bin examples/org-label-test.s -o org-label-test.bin
+else
+	./$(TARGET) -f bin examples/org-label-test.s -o org-label-test.bin
+endif
 
-RUN_OBJECTS := \
-	$(BUILD_DIR)/main.o \
-	$(BUILD_DIR)/cli.o \
-	$(BUILD_DIR)/log.o
-
-all: $(LIBT32) $(T32_RUN)
-
-$(LIBT32): $(CORE_OBJECTS)
-	@$(MKDIR_P) "$(LIB_DIR)"
-	$(AR) rcs $@ $^
-
-$(T32_RUN): $(RUN_OBJECTS) $(LIBT32)
-	@$(MKDIR_P) "$(BIN_DIR)"
-	$(CC) $(RUN_OBJECTS) $(LIBT32) -o $@
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@$(MKDIR_P) "$(BUILD_DIR)"
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-test: all
-	$(PYTHON) tests/isa_smoke.py
-
-install: all
-	@$(MKDIR_P) "$(PREFIX)/bin"
-	@$(MKDIR_P) "$(PREFIX)/lib"
-	@$(MKDIR_P) "$(PREFIX)/include"
-	@$(CP) "$(T32_RUN)" "$(PREFIX)/bin/"
-	@$(CP) "$(LIBT32)" "$(PREFIX)/lib/"
-	@$(CP) "$(INC_DIR)/t32.h" "$(PREFIX)/include/"
-	@$(CP) "$(INC_DIR)/t32_opcodes.h" "$(PREFIX)/include/"
-	@$(CP) "$(INC_DIR)/version.h" "$(PREFIX)/include/"
-	@echo "Installed t32-run to $(PREFIX)/bin"
-	@echo "Installed libt32.a to $(PREFIX)/lib"
+install: $(TARGET)
+ifeq ($(OS),Windows_NT)
+	@if not exist "$(BINDIR)" mkdir "$(BINDIR)"
+	copy /Y "$(TARGET)" "$(BINDIR)\\$(TARGET)"
+else
+	$(MKDIR_P) "$(BINDIR)"
+	$(CP) "$(TARGET)" "$(BINDIR)/$(TARGET)"
+endif
 
 clean:
-	@$(RM_RF) "$(BUILD_DIR)"
-	@$(RM_RF) "$(BIN_DIR)"
-	@$(RM_RF) "$(LIB_DIR)"
-	@$(RM_RF) "tests/00-smoke/001-r0-47/test.log"
-	@$(RM_RF) "tests/00-smoke/001-r0-47/test.t32"
-	@$(RM_RF) "tests/01-core-iset/002-mov/mov.log"
-	@$(RM_RF) "tests/01-core-iset/002-mov/mov.t32"
+ifeq ($(OS),Windows_NT)
+	-$(RM) $(TARGET) org-label-test.bin 2>NUL
+else
+	$(RM) $(TARGET) org-label-test.bin
+endif
 
-rebuild: clean all
-
-.PHONY: all test install clean rebuild
+.PHONY: all test install clean
